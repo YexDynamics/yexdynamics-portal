@@ -29,14 +29,16 @@ public class LeaderboardServiceImpl implements LeaderboardService {
 
     @Override
     public LeaderboardResponseDTO createScore(LeaderboardDTO dto) {
-        log.info("Registrando puntaje para el jugador: {} en el juego ID: {}", dto.getNickname(), dto.getGameId());
+        log.info("Registrando puntaje para el jugador: {} en el juego ID/Título: {} / {}",
+                dto.getNickname(), dto.getGameId(), dto.getGameTitle());
         validateLeaderboardDTO(dto);
 
+        // Find or create Player
         Player player = playerRepository.findByNickname(dto.getNickname())
                 .orElseGet(() -> playerRepository.save(new Player(null, dto.getNickname())));
 
-        Game game = gameRepository.findById(dto.getGameId())
-                .orElseThrow(() -> new RuntimeException("Juego no encontrado con ID: " + dto.getGameId()));
+        // Find or create Game (se busca por ID, luego por Título, o se autogenera)
+        Game game = resolveOrCreateGame(dto);
 
         Leaderboard leaderboard = new Leaderboard();
         leaderboard.setPlayer(player);
@@ -74,12 +76,38 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         leaderboardRepository.deleteById(id);
     }
 
+    private Game resolveOrCreateGame(LeaderboardDTO dto) {
+        if (dto.getGameId() != null) {
+            Game gameFound = gameRepository.findById(dto.getGameId()).orElse(null);
+            if (gameFound != null) return gameFound;
+        }
+
+        if (dto.getGameTitle() != null && !dto.getGameTitle().trim().isEmpty()) {
+            Game gameFound = gameRepository.findByTitle(dto.getGameTitle()).orElse(null);
+            if (gameFound != null) return gameFound;
+        }
+
+        String fallbackTitle = (dto.getGameTitle() != null && !dto.getGameTitle().trim().isEmpty())
+                ? dto.getGameTitle()
+                : "Juego #" + (dto.getGameId() != null ? dto.getGameId() : "1");
+
+        Game newGame = new Game();
+        if (dto.getGameId() != null) {
+            newGame.setId(dto.getGameId());
+        }
+        newGame.setTitle(fallbackTitle);
+        newGame.setDescription("Registrado automáticamente al guardar puntaje");
+        newGame.setVersion("1.0.0");
+
+        return gameRepository.save(newGame);
+    }
+
     private void validateLeaderboardDTO(LeaderboardDTO dto) {
         if (dto.getNickname() == null || dto.getNickname().trim().isEmpty()) {
             throw new IllegalArgumentException("El nickname del jugador es obligatorio");
         }
-        if (dto.getGameId() == null) {
-            throw new IllegalArgumentException("El ID del juego es obligatorio");
+        if (dto.getGameId() == null && (dto.getGameTitle() == null || dto.getGameTitle().trim().isEmpty())) {
+            throw new IllegalArgumentException("Se requiere un ID de juego o un título de juego");
         }
         if (dto.getScoreValue() == null || dto.getScoreValue() < 0) {
             throw new IllegalArgumentException("El puntaje debe ser un valor válido mayor o igual a 0");
