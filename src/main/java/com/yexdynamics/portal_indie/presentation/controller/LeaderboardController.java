@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,7 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Leaderboard", description = "Gestión de tabla de clasificación y puntajes de juegos indie")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:4200")
 public class LeaderboardController {
 
     private final LeaderboardService leaderboardService;
@@ -95,8 +96,7 @@ public class LeaderboardController {
             description = "Retorna la lista de puntajes ordenados de mayor a menor para un juego específico"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Lista de puntajes obtenida exitosamente"),
-            @ApiResponse(responseCode = "204", description = "No hay puntajes registrados para este juego"),
+            @ApiResponse(responseCode = "200", description = "Lista de puntajes obtenida exitosamente (puede ser un arreglo vacío)"),
             @ApiResponse(responseCode = "500", description = "Error interno")
     })
     public ResponseEntity<?> getTopScoresByGame(
@@ -108,8 +108,8 @@ public class LeaderboardController {
         try {
             List<LeaderboardResponseDTO> scores = leaderboardService.getTopScoresByGame(gameId);
 
-            if (scores.isEmpty()) {
-                return ResponseEntity.noContent().build();
+            if (scores == null || scores.isEmpty()) {
+                return ResponseEntity.ok(Collections.emptyList());
             }
 
             return ResponseEntity.ok(scores);
