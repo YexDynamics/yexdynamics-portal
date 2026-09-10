@@ -34,5 +34,28 @@ services:
       db:
         condition: service_healthy
 
+  frontend:
+    build:
+      context: ../portal-indie-front  # Ajusta esta ruta según la ubicación de tus carpetas
+      dockerfile: Dockerfile
+    container_name: portal_indie_frontend
+    restart: always
+    ports:
+      - "4200:80"
+    depends_on:
+      - app
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_container
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
 volumes:
   postgres_data:
