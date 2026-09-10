@@ -16,6 +16,6 @@ public class Player {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 8)
+    @Column(nullable = false, length = 50)
     private String nickname;
 }

@@ -37,12 +37,20 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         Player player = playerRepository.findByNickname(dto.getNickname())
                 .orElseGet(() -> playerRepository.save(new Player(null, dto.getNickname())));
 
-        // Find or create Game (se busca por ID, luego por Título, o se autogenera)
+        // Find or create Game
         Game game = resolveOrCreateGame(dto);
 
-        Leaderboard leaderboard = new Leaderboard();
-        leaderboard.setPlayer(player);
-        leaderboard.setGame(game);
+        // Buscar si ya existe la puntuación de este jugador en este juego, o crear una nueva
+        Leaderboard leaderboard = leaderboardRepository
+                .findByGameIdAndPlayerId(game.getId(), player.getId())
+                .orElseGet(() -> {
+                    Leaderboard newLeaderboard = new Leaderboard();
+                    newLeaderboard.setPlayer(player);
+                    newLeaderboard.setGame(game);
+                    return newLeaderboard;
+                });
+
+        // Actualizamos el puntaje con el valor recibido
         leaderboard.setScoreValue(dto.getScoreValue());
 
         Leaderboard saved = leaderboardRepository.save(leaderboard);
