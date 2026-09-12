@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,29 +34,29 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                 dto.getNickname(), dto.getGameId(), dto.getGameTitle());
         validateLeaderboardDTO(dto);
 
-        // Find or create Player
         Player player = playerRepository.findByNickname(dto.getNickname())
                 .orElseGet(() -> playerRepository.save(new Player(null, dto.getNickname())));
 
-        // Find or create Game
         Game game = resolveOrCreateGame(dto);
 
-        // Buscar si ya existe la puntuación de este jugador en este juego, o crear una nueva
         Leaderboard leaderboard = leaderboardRepository
                 .findByGameIdAndPlayerId(game.getId(), player.getId())
-                .orElseGet(() -> {
-                    Leaderboard newLeaderboard = new Leaderboard();
-                    newLeaderboard.setPlayer(player);
-                    newLeaderboard.setGame(game);
-                    return newLeaderboard;
-                });
+                .orElse(null);
 
-        // Actualizamos el puntaje con el valor recibido
-        leaderboard.setScoreValue(dto.getScoreValue());
+        if (leaderboard == null) {
+            leaderboard = new Leaderboard();
+            leaderboard.setPlayer(player);
+            leaderboard.setGame(game);
+            leaderboard.setScoreValue(dto.getScoreValue());
+            leaderboard.setAchievedAt(LocalDateTime.now());
+            leaderboard = leaderboardRepository.save(leaderboard);
+        } else if (dto.getScoreValue() > leaderboard.getScoreValue()) {
+            leaderboard.setScoreValue(dto.getScoreValue());
+            leaderboard.setAchievedAt(LocalDateTime.now());
+            leaderboard = leaderboardRepository.save(leaderboard);
+        }
 
-        Leaderboard saved = leaderboardRepository.save(leaderboard);
-
-        return mapToResponseDTO(saved);
+        return mapToResponseDTO(leaderboard);
     }
 
     @Override

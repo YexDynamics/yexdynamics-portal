@@ -39,4 +39,11 @@ public class Leaderboard {
 
     @Column(name = "achieved_at", nullable = false)
     private LocalDateTime achievedAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.achievedAt == null) {
+            this.achievedAt = LocalDateTime.now();
+        }
+    }
 }
