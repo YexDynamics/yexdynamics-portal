@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,21 +34,29 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                 dto.getNickname(), dto.getGameId(), dto.getGameTitle());
         validateLeaderboardDTO(dto);
 
-        // Find or create Player
         Player player = playerRepository.findByNickname(dto.getNickname())
                 .orElseGet(() -> playerRepository.save(new Player(null, dto.getNickname())));
 
-        // Find or create Game (se busca por ID, luego por Título, o se autogenera)
         Game game = resolveOrCreateGame(dto);
 
-        Leaderboard leaderboard = new Leaderboard();
-        leaderboard.setPlayer(player);
-        leaderboard.setGame(game);
-        leaderboard.setScoreValue(dto.getScoreValue());
+        Leaderboard leaderboard = leaderboardRepository
+                .findByGameIdAndPlayerId(game.getId(), player.getId())
+                .orElse(null);
 
-        Leaderboard saved = leaderboardRepository.save(leaderboard);
+        if (leaderboard == null) {
+            leaderboard = new Leaderboard();
+            leaderboard.setPlayer(player);
+            leaderboard.setGame(game);
+            leaderboard.setScoreValue(dto.getScoreValue());
+            leaderboard.setAchievedAt(LocalDateTime.now());
+            leaderboard = leaderboardRepository.save(leaderboard);
+        } else if (dto.getScoreValue() > leaderboard.getScoreValue()) {
+            leaderboard.setScoreValue(dto.getScoreValue());
+            leaderboard.setAchievedAt(LocalDateTime.now());
+            leaderboard = leaderboardRepository.save(leaderboard);
+        }
 
-        return mapToResponseDTO(saved);
+        return mapToResponseDTO(leaderboard);
     }
 
     @Override
