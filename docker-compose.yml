@@ -20,7 +20,7 @@ services:
       retries: 5
 
   app:
-    build: .
+    image: yexdynamics/portal-indie-backend:1.0
     container_name: portal_indie_backend
     restart: always
     ports:
@@ -35,9 +35,7 @@ services:
         condition: service_healthy
 
   frontend:
-    build:
-      context: ../portal-indie-front  # Ajusta esta ruta según la ubicación de tus carpetas
-      dockerfile: Dockerfile
+    image: yexdynamics/portal-indie-frontend:1.0
     container_name: portal_indie_frontend
     restart: always
     ports:
