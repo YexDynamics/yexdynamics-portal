@@ -14,4 +14,9 @@ spring.jpa.show-sql=true
 spring.jpa.open-in-view=false
 
 # 4. CORS — orígenes permitidos (para cuando conectes el frontend/Angular)
-security.cors.allowed-origins=http://localhost:4200ocalhost:4200ibernate.dialect.PostgreSQLDialect
+security.cors.allowed-origins=http://localhost:4200
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# 5. Integración externa (RAWG API) — obtén tu API key gratuita en https://rawg.io/apidocs
+rawg.api.key=${RAWG_API_KEY:tu_api_key_aqui}
+rawg.api.base-url=https://api.rawg.io/api
