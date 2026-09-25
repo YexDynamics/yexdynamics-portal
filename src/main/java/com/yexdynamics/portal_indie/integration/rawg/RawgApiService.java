@@ -33,11 +33,14 @@ public class RawgApiService {
     }
 
     public List<RawgGameDto> searchIndieGames(int limit) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("⚠️ RAWG_API_KEY no está configurada o está vacía en las variables de entorno.");
+        }
+
         RawgGameListResponseDto response = restClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/games")
                         .queryParam("key", apiKey)
-                        .queryParam("tags", "indie")
                         .queryParam("ordering", "-rating")
                         .queryParam("page_size", limit)
                         .build())
