@@ -30,6 +30,7 @@ services:
       SPRING_DATASOURCE_USERNAME: devuser
       SPRING_DATASOURCE_PASSWORD: devpassword
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      RAWG_API_KEY: ${RAWG_API_KEY}
     depends_on:
       db:
         condition: service_healthy
