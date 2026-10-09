@@ -2,8 +2,8 @@ package com.yexdynamics.portal_indie.presentation.controller;
 
 import com.yexdynamics.portal_indie.business.dto.CreateGameDTO;
 import com.yexdynamics.portal_indie.business.dto.GameDTO;
-import com.yexdynamics.portal_indie.business.dto.UpdateGameDTO;
 import com.yexdynamics.portal_indie.business.service.GameService;
+import com.yexdynamics.portal_indie.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.NoSuchElementException;
@@ -35,7 +37,7 @@ public class GameController {
     @PostMapping
     @Operation(
             summary = "Registrar juego",
-            description = "Registra un nuevo juego indie en el catálogo del portal."
+            description = "Registra un nuevo juego indie en el catálogo del portal, con el usuario autenticado como propietario."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -47,19 +49,21 @@ public class GameController {
                     )
             ),
             @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos o título repetido"),
+            @ApiResponse(responseCode = "401", description = "Debes iniciar sesión para publicar un juego"),
             @ApiResponse(responseCode = "500", description = "Error interno del servidor")
     })
     public ResponseEntity<?> createGame(
+            @AuthenticationPrincipal CustomUserDetails principal,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Datos del juego a registrar",
                     required = true
             )
             @Valid @RequestBody CreateGameDTO dto
     ) {
-        log.info("POST /api/v1/games - Registrando nuevo juego: {}", dto.getTitle());
+        log.info("POST /api/v1/games - Registrando nuevo juego: {} (owner: {})", dto.getTitle(), principal.getUsername());
 
         try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(gameService.createGame(dto));
+            return ResponseEntity.status(HttpStatus.CREATED).body(gameService.createGame(dto, principal.getUser()));
 
         } catch (IllegalArgumentException e) {
             log.warn("Datos inválidos al registrar juego: {}", e.getMessage());
@@ -128,83 +132,8 @@ public class GameController {
         }
     }
 
-    @PutMapping("/{id}")
-    @Operation(
-            summary = "Actualizar juego",
-            description = "Actualiza la información de un juego activo del catálogo"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Juego actualizado exitosamente",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = GameDTO.class)
-                    )
-            ),
-            @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos o título repetido"),
-            @ApiResponse(responseCode = "404", description = "Juego no encontrado o deshabilitado"),
-            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
-    })
-    public ResponseEntity<?> updateGame(
-            @Parameter(description = "ID del juego", required = true, example = "1")
-            @PathVariable Long id,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Nuevos datos del juego",
-                    required = true
-            )
-            @Valid @RequestBody UpdateGameDTO dto
-    ) {
-        log.info("PUT /api/v1/games/{}", id);
-
-        try {
-            return ResponseEntity.ok(gameService.updateGame(id, dto));
-
-        } catch (NoSuchElementException e) {
-            log.warn("Juego no encontrado ID: {}", id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-
-        } catch (IllegalArgumentException e) {
-            log.warn("Datos inválidos al actualizar juego ID {}: {}", id, e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
-
-        } catch (Exception e) {
-            log.error("Error al actualizar el juego ID {}", id, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(INTERNAL_ERROR);
-        }
-    }
-
-    @DeleteMapping("/{id}")
-    @Operation(
-            summary = "Deshabilitar juego",
-            description = "Deshabilita un juego del catálogo (borrado lógico). El registro se conserva en la base de datos"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Juego deshabilitado correctamente"),
-            @ApiResponse(responseCode = "404", description = "Juego no encontrado o ya deshabilitado"),
-            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
-    })
-    public ResponseEntity<?> deleteGame(
-            @Parameter(description = "ID del juego", required = true, example = "1")
-            @PathVariable Long id
-    ) {
-        log.info("DELETE /api/v1/games/{}", id);
-
-        try {
-            gameService.deleteGame(id);
-            return ResponseEntity.noContent().build();
-
-        } catch (NoSuchElementException e) {
-            log.warn("Juego no encontrado ID: {}", id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-
-        } catch (Exception e) {
-            log.error("Error al deshabilitar el juego ID {}", id, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(INTERNAL_ERROR);
-        }
-    }
-
     @DeleteMapping("/admin/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
             summary = "Eliminar juego permanentemente",
             description = "Elimina físicamente un juego de la base de datos. Exclusivo para administradores"

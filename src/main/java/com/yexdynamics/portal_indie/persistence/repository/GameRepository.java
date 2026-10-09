@@ -19,4 +19,6 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     boolean existsByTitle(String title);
 
     boolean existsByTitleAndIdNot(String title, Long id);
+
+    List<Game> findAllByOwnerId(Long ownerId);
 }

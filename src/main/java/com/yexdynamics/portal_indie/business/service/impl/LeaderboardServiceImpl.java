@@ -85,6 +85,16 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         leaderboardRepository.deleteById(id);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<LeaderboardResponseDTO> getScoresByNickname(String nickname) {
+        log.info("Obteniendo puntajes asociados al nickname: {}", nickname);
+        return leaderboardRepository.findByPlayer_NicknameIgnoreCase(nickname)
+                .stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
     private Game resolveOrCreateGame(LeaderboardDTO dto) {
         if (dto.getGameId() != null) {
             Game gameFound = gameRepository.findById(dto.getGameId()).orElse(null);

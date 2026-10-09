@@ -14,4 +14,6 @@ public interface LeaderboardService {
     LeaderboardResponseDTO getScoreById(Long id);
 
     void deleteScore(Long id);
+
+    List<LeaderboardResponseDTO> getScoresByNickname(String nickname);
 }

@@ -13,4 +13,6 @@ public interface LeaderboardRepository extends JpaRepository<Leaderboard, Long> 
     Optional<Leaderboard> findByGameIdAndPlayerId(Long gameId, Long playerId);
 
     List<Leaderboard> findByGameIdOrderByScoreValueDesc(Long gameId);
+
+    List<Leaderboard> findByPlayer_NicknameIgnoreCase(String nickname);
 }

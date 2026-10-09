@@ -40,6 +40,10 @@ public class Game {
     @Column(name = "download_url", length = 500)
     private String downloadUrl;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
     @ColumnDefault("true")
     @Column(nullable = false)
     private Boolean active = true;
