@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -128,42 +127,6 @@ public class GameController {
 
         } catch (Exception e) {
             log.error("Error al buscar el juego ID {}", id, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(INTERNAL_ERROR);
-        }
-    }
-
-    @DeleteMapping("/admin/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(
-            summary = "Eliminar juego permanentemente",
-            description = "Elimina físicamente un juego de la base de datos. Exclusivo para administradores"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Juego eliminado permanentemente"),
-            @ApiResponse(responseCode = "404", description = "Juego no encontrado"),
-            @ApiResponse(responseCode = "409", description = "El juego tiene puntajes asociados y no puede eliminarse"),
-            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
-    })
-    public ResponseEntity<?> hardDeleteGame(
-            @Parameter(description = "ID del juego", required = true, example = "1")
-            @PathVariable Long id
-    ) {
-        log.warn("DELETE /api/v1/games/admin/{} - Eliminación física solicitada", id);
-
-        try {
-            gameService.hardDeleteGame(id);
-            return ResponseEntity.noContent().build();
-
-        } catch (NoSuchElementException e) {
-            log.warn("Juego no encontrado ID: {}", id);
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-
-        } catch (IllegalStateException e) {
-            log.warn("No se pudo eliminar físicamente el juego ID {}: {}", id, e.getMessage());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-
-        } catch (Exception e) {
-            log.error("Error al eliminar físicamente el juego ID {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(INTERNAL_ERROR);
         }
     }

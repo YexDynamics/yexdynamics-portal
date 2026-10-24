@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,6 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private static final String INTERNAL_ERROR = "Error interno del servidor";
+    private static final String ACCOUNT_DISABLED = "La cuenta se encuentra suspendida o inhabilitada.";
 
     private final AuthService authService;
 
@@ -84,6 +86,7 @@ public class AuthController {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthResponseDTO.class))
             ),
             @ApiResponse(responseCode = "401", description = "Credenciales inválidas"),
+            @ApiResponse(responseCode = "403", description = "La cuenta se encuentra suspendida o inhabilitada"),
             @ApiResponse(responseCode = "500", description = "Error interno del servidor")
     })
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDTO dto) {
@@ -91,6 +94,10 @@ public class AuthController {
 
         try {
             return ResponseEntity.ok(authService.login(dto));
+
+        } catch (DisabledException e) {
+            log.warn("Intento de inicio de sesión con una cuenta inhabilitada: {}", dto.getUsername());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ACCOUNT_DISABLED);
 
         } catch (AuthenticationException e) {
             log.warn("Credenciales inválidas para el usuario: {}", dto.getUsername());

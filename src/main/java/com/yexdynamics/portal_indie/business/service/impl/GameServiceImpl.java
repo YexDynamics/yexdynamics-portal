@@ -1,5 +1,6 @@
 package com.yexdynamics.portal_indie.business.service.impl;
 
+import com.yexdynamics.portal_indie.business.dto.AdminGameResponseDTO;
 import com.yexdynamics.portal_indie.business.dto.CreateGameDTO;
 import com.yexdynamics.portal_indie.business.dto.GameDTO;
 import com.yexdynamics.portal_indie.business.dto.UpdateGameDTO;
@@ -88,6 +89,15 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<AdminGameResponseDTO> getAllGamesForAdmin() {
+        return gameRepository.findAllWithOwner()
+                .stream()
+                .map(this::mapToAdminDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<GameDTO> getMyGames(Long ownerId) {
         return gameRepository.findAllByOwnerId(ownerId)
                 .stream()
@@ -143,6 +153,22 @@ public class GameServiceImpl implements GameService {
         }
 
         return game;
+    }
+
+    private AdminGameResponseDTO mapToAdminDTO(Game game) {
+        return new AdminGameResponseDTO(
+                game.getId(),
+                game.getTitle(),
+                game.getDescription(),
+                game.getVersion(),
+                game.getGenre(),
+                game.getDeveloperName(),
+                game.getCoverImageUrl(),
+                game.getDownloadUrl(),
+                game.getActive(),
+                game.getOwner() != null ? game.getOwner().getUsername() : null,
+                game.getCreatedAt()
+        );
     }
 
     private GameDTO mapToDTO(Game game) {

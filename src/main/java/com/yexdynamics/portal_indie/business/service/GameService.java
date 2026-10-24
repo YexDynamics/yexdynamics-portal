@@ -1,5 +1,6 @@
 package com.yexdynamics.portal_indie.business.service;
 
+import com.yexdynamics.portal_indie.business.dto.AdminGameResponseDTO;
 import com.yexdynamics.portal_indie.business.dto.CreateGameDTO;
 import com.yexdynamics.portal_indie.business.dto.GameDTO;
 import com.yexdynamics.portal_indie.business.dto.UpdateGameDTO;
@@ -13,6 +14,7 @@ public interface GameService {
     GameDTO createGame(CreateGameDTO createGameDTO, User owner);
     void hardDeleteGame(Long id);
     void updateGameStatus(Long id, boolean active);
+    List<AdminGameResponseDTO> getAllGamesForAdmin();
 
     List<GameDTO> getMyGames(Long ownerId);
     GameDTO getMyGameById(Long id, Long ownerId);

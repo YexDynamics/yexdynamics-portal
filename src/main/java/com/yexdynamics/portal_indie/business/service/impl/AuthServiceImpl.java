@@ -10,6 +10,8 @@ import com.yexdynamics.portal_indie.persistence.repository.UserRepository;
 import com.yexdynamics.portal_indie.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class AuthServiceImpl implements AuthService {
     private static final String USERNAME_ALREADY_EXISTS = "El nombre de usuario ya está en uso: ";
     private static final String EMAIL_ALREADY_EXISTS = "El correo ya está registrado: ";
     private static final String NICKNAME_ALREADY_EXISTS = "El nickname ya está en uso: ";
+    private static final String INVALID_CREDENTIALS = "Usuario o contraseña incorrectos";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -56,14 +59,27 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponseDTO login(LoginRequestDTO dto) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword())
-        );
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(dto.getUsername(), dto.getPassword())
+            );
+        } catch (DisabledException e) {
+            if (isPasswordValid(dto)) {
+                throw e;
+            }
+            throw new BadCredentialsException(INVALID_CREDENTIALS);
+        }
 
         User user = userRepository.findByUsername(dto.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + dto.getUsername()));
 
         return buildAuthResponse(user);
+    }
+
+    private boolean isPasswordValid(LoginRequestDTO dto) {
+        return userRepository.findByUsername(dto.getUsername())
+                .map(user -> passwordEncoder.matches(dto.getPassword(), user.getPassword()))
+                .orElse(false);
     }
 
     private AuthResponseDTO buildAuthResponse(User user) {
