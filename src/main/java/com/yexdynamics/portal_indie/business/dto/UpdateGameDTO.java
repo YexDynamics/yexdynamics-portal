@@ -41,4 +41,7 @@ public class UpdateGameDTO {
     @Size(max = 500, message = "La URL de descarga no puede superar los 500 caracteres")
     @Schema(description = "URL para descargar o jugar el título", example = "https://example.com/games/puntoball", maxLength = 500)
     private String downloadUrl;
+
+    @Schema(description = "Vincular el juego al leaderboard online. true genera el token si no existe; false lo elimina; si se omite no se modifica")
+    private Boolean linkLeaderboard;
 }

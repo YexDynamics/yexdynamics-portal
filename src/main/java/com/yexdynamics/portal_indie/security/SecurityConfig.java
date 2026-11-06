@@ -50,6 +50,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/games/**", "/api/v1/external-games/**").permitAll()
                         .requestMatchers("/api/v1/leaderboard/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/scores").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/my-games/**").hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated()

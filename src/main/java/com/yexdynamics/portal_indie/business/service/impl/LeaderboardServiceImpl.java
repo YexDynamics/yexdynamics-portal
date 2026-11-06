@@ -34,10 +34,14 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                 dto.getNickname(), dto.getGameId(), dto.getGameTitle());
         validateLeaderboardDTO(dto);
 
+        Game game = resolveOrCreateGame(dto);
+
+        if (game.getGameToken() != null) {
+            throw new IllegalArgumentException("Este juego está vinculado al leaderboard online; los puntajes se registran automáticamente");
+        }
+
         Player player = playerRepository.findByNickname(dto.getNickname())
                 .orElseGet(() -> playerRepository.save(new Player(null, dto.getNickname())));
-
-        Game game = resolveOrCreateGame(dto);
 
         Leaderboard leaderboard = leaderboardRepository
                 .findByGameIdAndPlayerId(game.getId(), player.getId())
