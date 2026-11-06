@@ -1,13 +1,16 @@
 package com.yexdynamics.portal_indie.business.service.impl;
 
+import com.yexdynamics.portal_indie.business.dto.AdminGameResponseDTO;
 import com.yexdynamics.portal_indie.business.dto.CreateGameDTO;
 import com.yexdynamics.portal_indie.business.dto.GameDTO;
 import com.yexdynamics.portal_indie.business.dto.UpdateGameDTO;
 import com.yexdynamics.portal_indie.business.service.GameService;
 import com.yexdynamics.portal_indie.persistence.entity.Game;
+import com.yexdynamics.portal_indie.persistence.entity.User;
 import com.yexdynamics.portal_indie.persistence.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +24,7 @@ public class GameServiceImpl implements GameService {
     private static final String DEFAULT_VERSION = "1.0.0";
     private static final String GAME_NOT_FOUND = "Juego no encontrado con ID: ";
     private static final String TITLE_ALREADY_EXISTS = "Ya existe un juego registrado con el título: ";
+    private static final String NOT_OWNER = "No tienes permisos para modificar este juego";
 
     private final GameRepository gameRepository;
 
@@ -41,7 +45,7 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional
-    public GameDTO createGame(CreateGameDTO dto) {
+    public GameDTO createGame(CreateGameDTO dto, User owner) {
         if (gameRepository.existsByTitle(dto.getTitle())) {
             throw new IllegalArgumentException(TITLE_ALREADY_EXISTS + dto.getTitle());
         }
@@ -54,14 +58,63 @@ public class GameServiceImpl implements GameService {
         game.setDeveloperName(dto.getDeveloperName());
         game.setCoverImageUrl(dto.getCoverImageUrl());
         game.setDownloadUrl(dto.getDownloadUrl());
+        game.setOwner(owner);
 
         return mapToDTO(gameRepository.save(game));
     }
 
     @Override
     @Transactional
-    public GameDTO updateGame(Long id, UpdateGameDTO dto) {
-        Game game = findActiveGame(id);
+    public void hardDeleteGame(Long id) {
+        Game game = gameRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException(GAME_NOT_FOUND + id));
+
+        try {
+            gameRepository.delete(game);
+            gameRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalStateException(
+                    "No se puede eliminar físicamente el juego con ID " + id + " porque tiene puntajes asociados", e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void updateGameStatus(Long id, boolean active) {
+        Game game = gameRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException(GAME_NOT_FOUND + id));
+        game.setActive(active);
+        gameRepository.save(game);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminGameResponseDTO> getAllGamesForAdmin() {
+        return gameRepository.findAllWithOwner()
+                .stream()
+                .map(this::mapToAdminDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GameDTO> getMyGames(Long ownerId) {
+        return gameRepository.findAllByOwnerId(ownerId)
+                .stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GameDTO getMyGameById(Long id, Long ownerId) {
+        return mapToDTO(findOwnedGame(id, ownerId));
+    }
+
+    @Override
+    @Transactional
+    public GameDTO updateMyGame(Long id, UpdateGameDTO dto, Long ownerId) {
+        Game game = findOwnedGame(id, ownerId);
 
         if (gameRepository.existsByTitleAndIdNot(dto.getTitle(), id)) {
             throw new IllegalArgumentException(TITLE_ALREADY_EXISTS + dto.getTitle());
@@ -80,30 +133,42 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional
-    public void deleteGame(Long id) {
-        Game game = findActiveGame(id);
+    public void disableMyGame(Long id, Long ownerId) {
+        Game game = findOwnedGame(id, ownerId);
         game.setActive(false);
         gameRepository.save(game);
-    }
-
-    @Override
-    @Transactional
-    public void hardDeleteGame(Long id) {
-        Game game = gameRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException(GAME_NOT_FOUND + id));
-
-        try {
-            gameRepository.delete(game);
-            gameRepository.flush();
-        } catch (DataIntegrityViolationException e) {
-            throw new IllegalStateException(
-                    "No se puede eliminar físicamente el juego con ID " + id + " porque tiene puntajes asociados", e);
-        }
     }
 
     private Game findActiveGame(Long id) {
         return gameRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(() -> new NoSuchElementException(GAME_NOT_FOUND + id));
+    }
+
+    private Game findOwnedGame(Long id, Long ownerId) {
+        Game game = gameRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException(GAME_NOT_FOUND + id));
+
+        if (game.getOwner() == null || !game.getOwner().getId().equals(ownerId)) {
+            throw new AccessDeniedException(NOT_OWNER);
+        }
+
+        return game;
+    }
+
+    private AdminGameResponseDTO mapToAdminDTO(Game game) {
+        return new AdminGameResponseDTO(
+                game.getId(),
+                game.getTitle(),
+                game.getDescription(),
+                game.getVersion(),
+                game.getGenre(),
+                game.getDeveloperName(),
+                game.getCoverImageUrl(),
+                game.getDownloadUrl(),
+                game.getActive(),
+                game.getOwner() != null ? game.getOwner().getUsername() : null,
+                game.getCreatedAt()
+        );
     }
 
     private GameDTO mapToDTO(Game game) {
