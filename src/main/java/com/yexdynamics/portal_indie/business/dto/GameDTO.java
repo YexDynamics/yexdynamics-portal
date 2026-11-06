@@ -1,5 +1,6 @@
 package com.yexdynamics.portal_indie.business.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -39,4 +40,11 @@ public class GameDTO {
 
     @Schema(description = "Fecha de registro en la plataforma", example = "2026-09-10T15:30:00")
     private LocalDateTime createdAt;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Schema(description = "Token de vinculación con el leaderboard online. Solo visible para el autor del juego", example = "3f2b8c1e-9d4a-4e7b-8a61-5c0d2f9b7a11", accessMode = Schema.AccessMode.READ_ONLY)
+    private String gameToken;
+
+    @Schema(description = "Indica si el juego está vinculado al leaderboard online (los puntajes se registran automáticamente)", example = "true", accessMode = Schema.AccessMode.READ_ONLY)
+    private Boolean leaderboardLinked;
 }

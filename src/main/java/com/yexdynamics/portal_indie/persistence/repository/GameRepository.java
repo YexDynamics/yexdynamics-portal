@@ -17,6 +17,10 @@ public interface GameRepository extends JpaRepository<Game, Long> {
 
     Optional<Game> findByIdAndActiveTrue(Long id);
 
+    Optional<Game> findByGameTokenAndActiveTrue(String gameToken);
+
+    boolean existsByGameToken(String gameToken);
+
     boolean existsByTitle(String title);
 
     boolean existsByTitleAndIdNot(String title, Long id);

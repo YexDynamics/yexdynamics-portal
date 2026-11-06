@@ -48,6 +48,9 @@ public class Game {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+    @Column(name = "game_token", unique = true, length = 36)
+    private String gameToken;
+
     @ColumnDefault("true")
     @Column(nullable = false)
     private Boolean active = true;
