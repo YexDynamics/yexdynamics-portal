@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -60,7 +61,11 @@ public class GameServiceImpl implements GameService {
         game.setDownloadUrl(dto.getDownloadUrl());
         game.setOwner(owner);
 
-        return mapToDTO(gameRepository.save(game));
+        if (Boolean.TRUE.equals(dto.getLinkLeaderboard())) {
+            game.setGameToken(generateUniqueToken());
+        }
+
+        return mapToOwnerDTO(gameRepository.save(game));
     }
 
     @Override
@@ -101,14 +106,14 @@ public class GameServiceImpl implements GameService {
     public List<GameDTO> getMyGames(Long ownerId) {
         return gameRepository.findAllByOwnerId(ownerId)
                 .stream()
-                .map(this::mapToDTO)
+                .map(this::mapToOwnerDTO)
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public GameDTO getMyGameById(Long id, Long ownerId) {
-        return mapToDTO(findOwnedGame(id, ownerId));
+        return mapToOwnerDTO(findOwnedGame(id, ownerId));
     }
 
     @Override
@@ -128,7 +133,13 @@ public class GameServiceImpl implements GameService {
         game.setCoverImageUrl(dto.getCoverImageUrl());
         game.setDownloadUrl(dto.getDownloadUrl());
 
-        return mapToDTO(gameRepository.save(game));
+        if (Boolean.TRUE.equals(dto.getLinkLeaderboard()) && game.getGameToken() == null) {
+            game.setGameToken(generateUniqueToken());
+        } else if (Boolean.FALSE.equals(dto.getLinkLeaderboard())) {
+            game.setGameToken(null);
+        }
+
+        return mapToOwnerDTO(gameRepository.save(game));
     }
 
     @Override
@@ -153,6 +164,14 @@ public class GameServiceImpl implements GameService {
         }
 
         return game;
+    }
+
+    private String generateUniqueToken() {
+        String token;
+        do {
+            token = UUID.randomUUID().toString();
+        } while (gameRepository.existsByGameToken(token));
+        return token;
     }
 
     private AdminGameResponseDTO mapToAdminDTO(Game game) {
@@ -181,7 +200,15 @@ public class GameServiceImpl implements GameService {
                 game.getDeveloperName(),
                 game.getCoverImageUrl(),
                 game.getDownloadUrl(),
-                game.getCreatedAt()
+                game.getCreatedAt(),
+                null,
+                game.getGameToken() != null
         );
+    }
+
+    private GameDTO mapToOwnerDTO(Game game) {
+        GameDTO dto = mapToDTO(game);
+        dto.setGameToken(game.getGameToken());
+        return dto;
     }
 }
