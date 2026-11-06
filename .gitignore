@@ -33,7 +33,6 @@ bin/
 ### Archivos de Configuración y Secretos ###
 **/application-test.properties
 **/application-dev.properties
-**/application.properties
 **/application-prod.properties
 .env
 .env.*
